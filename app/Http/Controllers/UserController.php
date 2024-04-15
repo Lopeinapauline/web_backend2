@@ -1,3 +1,10 @@
+<?php
+namespace App\Http\Controllers;
+use App\Http\Requests\UserRegisterRequest;
+use App\Http\Requests\UserLoginRequest;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\support\Str;
 use Illuminate\support\Facades\Hash;
@@ -5,7 +12,24 @@ use Illuminate\support\Facades\Auth;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class UserController extends Controller
-@@ -38,4 +39,10 @@ public function login(UserLoginRequest $request): UserResource
+{
+    public function register(UserRegisterRequest $request): JsonResponse
+    {
+        $user = User::create($request->validated());
+        return (new UserResource($user))->response()->setStatusCode(201);
+    }
+    public function login(UserLoginRequest $request): UserResource
+    {
+        $data = $request->validated();
+        $user = User::where('email', $data['email'])->first();
+        if (!$user || !Hash::check($data['password'], $user->password)) {
+            throw new HttpResponseException (response([
+                'errors' => [
+                    'message' => ['username or password wrong'],
+                ]
+            ],401));
+        }
+        $user->remember_token = Str::uuid()->toString();
         $user->save();
         return new UserResource($user);
     }
@@ -14,24 +38,5 @@ class UserController extends Controller
     {
         $user = Auth::user();
         return new UserResource($user);
-    }
-}<?php
-
-namespace App\Http\Controllers;
-
-use App\Http\Request\UserRegisterRequest;
-use App\Http\Resource\UserResource;
-use App\Models\User;
-
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResource;
-
-class UserController extends Controller
-{
-    public function register(UserRegisterRequest $request): JsonResponse
-    {
-        $user = User::create(request->validated());
-    
-        return (new UserResource($user))->response()->setStatusCode(201);
     }
 }
